@@ -1,6 +1,7 @@
 import React from "react";
 import { WithContext as ReactTags } from 'react-tag-input';
 import $ from "jquery";
+import moment from "moment";
 
 
 const scheduleForm = React.createClass({
@@ -94,7 +95,7 @@ const scheduleForm = React.createClass({
   _onAdd: function(e) {
     const schedule = {
       clusterName: this.state.clusterName, keyspace: this.state.keyspace,
-      owner: this.state.owner, scheduleTriggerTime: this.state.startTime,
+      owner: this.state.owner, scheduleTriggerTime: moment(this.state.startTime).utc().format("YYYY-MM-DDTHH:mm"),
       scheduleDaysBetween: this.state.intervalDays
     };
     if(this.state.tables) schedule.tables = this.state.tables;

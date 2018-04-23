@@ -19,6 +19,7 @@ import logging
 import os
 import urllib
 import urlparse
+from datetime import datetime
 
 import sys
 import requests
@@ -666,6 +667,7 @@ class ReaperCLI(object):
             print("# Please specify repair schedule by giving at least value for " \
                   "schedule-days-between parameter")
             exit(1)
+
         if args.tables:
             printq ("# Registering repair schedule for cluster '{0}', and keyspace '{1}', "
                    "targeting tables: '{2}', with scheduled days between triggerings '{3}', "
