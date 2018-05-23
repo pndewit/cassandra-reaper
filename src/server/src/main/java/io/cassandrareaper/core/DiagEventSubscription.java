@@ -111,20 +111,12 @@ public class DiagEventSubscription {
       return false;
     }
     DiagEventSubscription that = (DiagEventSubscription) obj;
-    return exportSse == that.exportSse
-            && Objects.equals(id, that.id)
-            && Objects.equals(cluster, that.cluster)
-            && Objects.equals(description, that.description)
-            && Objects.equals(includeNodes, that.includeNodes)
-            && Objects.equals(events, that.events)
-            && Objects.equals(exportFileLogger, that.exportFileLogger)
-            && Objects.equals(exportHttpEndpoint, that.exportHttpEndpoint);
+    return Objects.equals(id, that.id);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, cluster, description, includeNodes, events,
-            exportSse, exportFileLogger, exportHttpEndpoint);
+    return Objects.hash(id);
   }
 
   @Override
