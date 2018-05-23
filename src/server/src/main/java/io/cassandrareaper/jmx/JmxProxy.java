@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 
 import javax.annotation.Nullable;
 import javax.management.AttributeNotFoundException;
@@ -160,7 +161,11 @@ public interface JmxProxy extends NotificationListener {
 
   void removeNotificationListener(NotificationListener listener) throws IOException, JMException;
 
-  void enableEvents(String eventClazz);
+  void enableEventPersistence(String eventClazz);
 
-  void enableEvents(String eventClazz, String eventType);
+  void disableEventPersistence(String eventClazz);
+
+  Map<String, Object> getLastEventIdsIfModified(long lastUpdate);
+
+  SortedMap<Long, Map<String, Object>> getEvents(String eventClazz, Long key, int limit, boolean includeKey);
 }

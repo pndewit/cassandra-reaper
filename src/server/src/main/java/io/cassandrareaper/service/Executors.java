@@ -12,19 +12,17 @@
  * limitations under the License.
  */
 
-package io.cassandrareaper.jmx;
+package io.cassandrareaper.service;
 
-import java.util.Map;
-import java.util.SortedMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 
-public interface DiagnosticEventServiceMBean {
+public final class Executors {
 
-  void enableEventPersistence(String eventClazz);
+  static final ExecutorService TASK_EXECUTOR = java.util.concurrent.Executors.newWorkStealingPool();
 
-  void disableEventPersistence(String eventClazz);
+  static final ScheduledExecutorService SCHEDULED_EXECUTOR = java.util.concurrent.Executors.newScheduledThreadPool(1);
 
-  Map<String, Object> getLastEventIdsIfModified(long timestamp);
-
-  SortedMap<Long, Map<String, Object>> getEvents(String eventClazz, Long key, int limit, boolean includeKey);
-
+  private Executors() {
+  }
 }

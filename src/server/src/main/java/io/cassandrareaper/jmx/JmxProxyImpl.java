@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -100,7 +101,8 @@ final class JmxProxyImpl implements JmxProxy {
   private static final int JMX_PORT = 7199;
   private static final String SS_OBJECT_NAME = "org.apache.cassandra.db:type=StorageService";
   private static final String AES_OBJECT_NAME = "org.apache.cassandra.internal:type=AntiEntropySessions";
-  private static final String EVENTS_OBJECT_NAME = "org.apache.cassandra.diag:type=DiagnosticEvents";
+  private static final String DIAG_EVENTS_OBJECT_NAME = "org.apache.cassandra.diag:type=DiagnosticEventPersistence";
+  private static final String JMX_LAST_ID_OBJECT_NAME = "org.apache.cassandra.jmx:type=LastEventIdBroadcaster";
   private static final String VALIDATION_ACTIVE_OBJECT_NAME
       = "org.apache.cassandra.metrics:type=ThreadPools,path=internal,scope=ValidationExecutor,name=ActiveTasks";
   private static final String VALIDATION_PENDING_OBJECT_NAME
@@ -134,6 +136,8 @@ final class JmxProxyImpl implements JmxProxy {
       Maps.newConcurrentMap();
   private final MetricRegistry metricRegistry;
   private final DiagnosticEventServiceMBean diagEventProxy;
+  private final Set<NotificationListener> registeredConnectionListener = new HashSet<>();
+  private final Set<NotificationListener> registeredNotificationListener = new HashSet<>();
 
   private JmxProxyImpl(
           String host,
@@ -235,7 +239,7 @@ final class JmxProxyImpl implements JmxProxy {
       cmMbeanName = new ObjectName(CompactionManager.MBEAN_OBJECT_NAME);
       fdMbeanName = new ObjectName(FailureDetector.MBEAN_NAME);
       endpointSnitchMbeanName = new ObjectName("org.apache.cassandra.db:type=EndpointSnitchInfo");
-      diagEventsMbeanName = new ObjectName(EVENTS_OBJECT_NAME);
+      diagEventsMbeanName = new ObjectName(DIAG_EVENTS_OBJECT_NAME);
     } catch (MalformedURLException | MalformedObjectNameException e) {
       LOG.error(String.format("Failed to prepare the JMX connection to %s:%s", host, port));
       throw new ReaperException("Failure during preparations for JMX connection", e);
@@ -1183,35 +1187,54 @@ final class JmxProxyImpl implements JmxProxy {
   }
 
   @Override
-  public void addConnectionNotificationListener(NotificationListener listener) {
-    jmxConnector.addConnectionNotificationListener(listener, null, null);
+  public synchronized void addConnectionNotificationListener(NotificationListener listener) {
+    if (registeredConnectionListener.add(listener)) {
+      jmxConnector.addConnectionNotificationListener(listener, null, null);
+    }
   }
 
   @Override
-  public void removeConnectionNotificationListener(NotificationListener listener) throws ListenerNotFoundException {
-    jmxConnector.removeConnectionNotificationListener(listener);
+  public synchronized void removeConnectionNotificationListener(NotificationListener listener)
+          throws ListenerNotFoundException {
+    if (registeredConnectionListener.remove(listener)) {
+      jmxConnector.removeConnectionNotificationListener(listener);
+    }
   }
 
   @Override
-  public void addNotificationListener(NotificationListener listener, NotificationFilter filter)
+  public synchronized void addNotificationListener(NotificationListener listener, NotificationFilter filter)
           throws IOException, JMException {
-    ObjectName eventsMbeanName = new ObjectName(EVENTS_OBJECT_NAME);
-    jmxConnector.getMBeanServerConnection().addNotificationListener(eventsMbeanName, listener, filter, null);
+    if (registeredNotificationListener.add(listener)) {
+      ObjectName eventsMbeanName = new ObjectName(JMX_LAST_ID_OBJECT_NAME);
+      jmxConnector.getMBeanServerConnection().addNotificationListener(eventsMbeanName, listener, filter, null);
+    }
   }
 
   @Override
-  public void removeNotificationListener(NotificationListener listener) throws IOException, JMException {
-    ObjectName eventsMbeanName = new ObjectName(EVENTS_OBJECT_NAME);
-    jmxConnector.getMBeanServerConnection().removeNotificationListener(eventsMbeanName, listener);
+  public synchronized void removeNotificationListener(NotificationListener listener) throws IOException, JMException {
+    if (registeredNotificationListener.remove(listener)) {
+      ObjectName eventsMbeanName = new ObjectName(JMX_LAST_ID_OBJECT_NAME);
+      jmxConnector.getMBeanServerConnection().removeNotificationListener(eventsMbeanName, listener);
+    }
   }
 
   @Override
-  public void enableEvents(String eventClazz) {
-    this.diagEventProxy.enableEvents(eventClazz);
+  public void enableEventPersistence(String eventClazz) {
+    this.diagEventProxy.enableEventPersistence(eventClazz);
   }
 
   @Override
-  public void enableEvents(String eventClazz, String eventType) {
-    this.diagEventProxy.enableEvents(eventClazz, eventType);
+  public void disableEventPersistence(String eventClazz) {
+    this.diagEventProxy.disableEventPersistence(eventClazz);
+  }
+
+  @Override
+  public Map<String, Object> getLastEventIdsIfModified(long lastUpdated) {
+    return this.diagEventProxy.getLastEventIdsIfModified(lastUpdated);
+  }
+
+  @Override
+  public SortedMap<Long, Map<String, Object>> getEvents(String eventClazz, Long key, int limit, boolean includeKey) {
+    return this.diagEventProxy.getEvents(eventClazz, key, limit, includeKey);
   }
 }
