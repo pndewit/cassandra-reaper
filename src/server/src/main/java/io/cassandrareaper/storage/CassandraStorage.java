@@ -34,6 +34,7 @@ import io.cassandrareaper.service.RingRange;
 import io.cassandrareaper.storage.cassandra.DateTimeCodec;
 import io.cassandrareaper.storage.cassandra.Migration003;
 import io.cassandrareaper.storage.cassandra.Migration009;
+import io.cassandrareaper.storage.cassandra.Migration013;
 
 import java.math.BigInteger;
 import java.util.Collection;
@@ -193,6 +194,8 @@ public final class CassandraStorage implements IStorage, IDistributedStorage {
     MigrationTask migration = new MigrationTask(database, new MigrationRepository("db/cassandra"));
     migration.migrate();
     Migration003.migrate(session);
+    // always run 013 step, incase new tables are added
+    Migration013.migrate(session, keyspace);
   }
 
   private void prepareStatements() {
@@ -230,7 +233,7 @@ public final class CassandraStorage implements IStorage, IDistributedStorage {
     insertRepairUnitPrepStmt =
         session.prepare(
             "INSERT INTO repair_unit_v1(id, cluster_name, keyspace_name, column_families, "
-                + "incremental_repair, nodes, datacenters, blacklisted_tables) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
+                + "incremental_repair, nodes, \"datacenters\", blacklisted_tables) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
     getRepairUnitPrepStmt = session.prepare("SELECT * FROM repair_unit_v1 WHERE id = ?");
     insertRepairSegmentPrepStmt = session
         .prepare(
