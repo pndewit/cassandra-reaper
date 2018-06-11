@@ -17,6 +17,7 @@ package io.cassandrareaper.service;
 import io.cassandrareaper.core.Node;
 import io.cassandrareaper.jmx.JmxProxy;
 import io.cassandrareaper.resources.view.DiagnosticEvent;
+import java.io.Serializable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -68,7 +69,7 @@ public class DiagEventPoller {
     schedule.cancel(false);
   }
 
-  public void onSummary(Map<String, Object> summary) {
+  public void onSummary(Map<String, Comparable> summary) {
     LOG.debug("Received event update summary");
     for (String summaryEntryKey : summary.keySet()) {
 
@@ -113,7 +114,7 @@ public class DiagEventPoller {
 
   private void retrieveEvents(String eventClazz, Long startingKey) {
     LOG.debug("Retrieving last {} events since key {}", EVENTS_LIMIT, startingKey);
-    SortedMap<Long, Map<String, Object>> events = jmxProxy.getEvents(eventClazz, startingKey, EVENTS_LIMIT, false);
+    SortedMap<Long, Map<String, Serializable>> events = jmxProxy.getEvents(eventClazz, startingKey, EVENTS_LIMIT, false);
     if (events == null || events.size() == 0) {
       LOG.debug("No {} events for {}", eventClazz, startingKey);
       return;
@@ -121,10 +122,10 @@ public class DiagEventPoller {
 
     LOG.debug("Received {} {} events for {}", events.size(), eventClazz, startingKey);
     List<DiagnosticEvent> diagEvents = new ArrayList<>(events.size());
-    for (Map.Entry<Long, Map<String, Object>> event : events.entrySet()) {
+    for (Map.Entry<Long, Map<String, Serializable>> event : events.entrySet()) {
       lastKeysByEvent.put(eventClazz, event.getKey());
 
-      Map<String, Object> eventPayload = event.getValue();
+      Map<String, Serializable> eventPayload = event.getValue();
       String evClazz = (String) eventPayload.get("class");
       String evType = (String) eventPayload.get("type");
       Long evTs = (Long) eventPayload.get("ts");
@@ -137,7 +138,7 @@ public class DiagEventPoller {
 
   private void pollSummary() {
     LOG.debug("Polling event update summary");
-    Map<String, Object> summary = jmxProxy.getLastEventIdsIfModified(lastUpdatedAt);
+    Map<String, Comparable> summary = jmxProxy.getLastEventIdsIfModified(lastUpdatedAt);
     if (summary == null) {
       LOG.debug("No summary updates since {}", lastUpdatedAt);
     } else {

@@ -20,6 +20,7 @@ import io.cassandrareaper.core.Snapshot;
 import io.cassandrareaper.service.RingRange;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.time.Duration;
 import java.util.Collection;
@@ -165,7 +166,7 @@ public interface JmxProxy extends NotificationListener {
 
   void disableEventPersistence(String eventClazz);
 
-  Map<String, Object> getLastEventIdsIfModified(long lastUpdate);
+  Map<String, Comparable> getLastEventIdsIfModified(long lastUpdate);
 
-  SortedMap<Long, Map<String, Object>> getEvents(String eventClazz, Long key, int limit, boolean includeKey);
+  SortedMap<Long, Map<String, Serializable>> getEvents(String eventClazz, Long key, int limit, boolean includeKey);
 }

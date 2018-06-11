@@ -48,6 +48,7 @@ import javax.ws.rs.core.MediaType;
 import com.google.common.base.Optional;
 import com.google.common.collect.MultimapBuilder;
 import com.google.common.collect.SetMultimap;
+import java.io.Serializable;
 import org.glassfish.jersey.media.sse.EventOutput;
 import org.glassfish.jersey.media.sse.OutboundEvent;
 import org.glassfish.jersey.media.sse.SseBroadcaster;
@@ -355,11 +356,11 @@ public class DiagEventSubscriptionService {
 
     private Node node;
     private Consumer<Notification> onConnectionClosed;
-    private Consumer<Map<String, Object>> onSummary;
+    private Consumer<Map<String, Comparable>> onSummary;
 
     NotificationListener(Node node,
                          Consumer<Notification> onConnectionClosed,
-                         Consumer<Map<String, Object>> onSummary) {
+                         Consumer<Map<String, Comparable>> onSummary) {
       this.node = node;
       this.onConnectionClosed = onConnectionClosed;
       this.onSummary = onSummary;
@@ -389,7 +390,7 @@ public class DiagEventSubscriptionService {
             case "event_last_id_summary":
               LOG.debug("Received event summary: {}", notification);
               if (onSummary != null) {
-                onSummary.accept((Map<String, Object>) notification.getUserData());
+                onSummary.accept((Map<String, Comparable>) notification.getUserData());
               }
               break;
 

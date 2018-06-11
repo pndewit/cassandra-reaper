@@ -14,17 +14,16 @@
 
 package io.cassandrareaper.jmx;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.SortedMap;
 
-public interface DiagnosticEventServiceMBean {
 
-  void enableEventPersistence(String eventClazz);
+public interface DiagnosticEventPersistenceMBean {
 
-  void disableEventPersistence(String eventClazz);
+    SortedMap<Long, Map<String, Serializable>> getEvents(String eventClazz, Long key, int limit, boolean includeKey);
 
-  Map<String, Object> getLastEventIdsIfModified(long timestamp);
+    void enableEventPersistence(String eventClazz);
 
-  SortedMap<Long, Map<String, Object>> getEvents(String eventClazz, Long key, int limit, boolean includeKey);
-
+    void disableEventPersistence(String eventClazz);
 }

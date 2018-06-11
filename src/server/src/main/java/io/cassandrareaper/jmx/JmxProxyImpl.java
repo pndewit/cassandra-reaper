@@ -77,6 +77,7 @@ import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
+import java.io.Serializable;
 import org.apache.cassandra.db.ColumnFamilyStoreMBean;
 import org.apache.cassandra.db.compaction.CompactionManager;
 import org.apache.cassandra.db.compaction.CompactionManagerMBean;
@@ -135,7 +136,8 @@ final class JmxProxyImpl implements JmxProxy {
   private final ConcurrentMap<Integer, RepairStatusHandler> repairStatusHandlers =
       Maps.newConcurrentMap();
   private final MetricRegistry metricRegistry;
-  private final DiagnosticEventServiceMBean diagEventProxy;
+  private final DiagnosticEventPersistenceMBean diagEventProxy;
+  private final LastEventIdBroadcasterMBean lastEventIdProxy;
   private final Set<NotificationListener> registeredConnectionListener = new HashSet<>();
   private final Set<NotificationListener> registeredNotificationListener = new HashSet<>();
 
@@ -150,7 +152,8 @@ final class JmxProxyImpl implements JmxProxy {
           CompactionManagerMBean cmProxy,
           EndpointSnitchInfoMBean endpointSnitchMbean,
           FailureDetectorMBean fdProxy,
-          DiagnosticEventServiceMBean diagEventProxy,
+          DiagnosticEventPersistenceMBean diagEventProxy,
+          LastEventIdBroadcasterMBean lastEventIdProxy,
           MetricRegistry metricRegistry) {
 
     this.host = host;
@@ -165,6 +168,7 @@ final class JmxProxyImpl implements JmxProxy {
     this.clusterName = Cluster.toSymbolicName(((StorageServiceMBean) ssProxy).getClusterName());
     this.fdProxy = fdProxy;
     this.diagEventProxy = diagEventProxy;
+    this.lastEventIdProxy = lastEventIdProxy;
     this.metricRegistry = metricRegistry;
     registerConnectionsGauge();
   }
@@ -224,6 +228,7 @@ final class JmxProxyImpl implements JmxProxy {
     ObjectName fdMbeanName;
     ObjectName endpointSnitchMbeanName;
     ObjectName diagEventsMbeanName;
+    ObjectName lastEventIdMbeanName;
     JMXServiceURL jmxUrl;
     String host = originalHost;
 
@@ -240,6 +245,7 @@ final class JmxProxyImpl implements JmxProxy {
       fdMbeanName = new ObjectName(FailureDetector.MBEAN_NAME);
       endpointSnitchMbeanName = new ObjectName("org.apache.cassandra.db:type=EndpointSnitchInfo");
       diagEventsMbeanName = new ObjectName(DIAG_EVENTS_OBJECT_NAME);
+      lastEventIdMbeanName = new ObjectName(JMX_LAST_ID_OBJECT_NAME);
     } catch (MalformedURLException | MalformedObjectNameException e) {
       LOG.error(String.format("Failed to prepare the JMX connection to %s:%s", host, port));
       throw new ReaperException("Failure during preparations for JMX connection", e);
@@ -265,8 +271,11 @@ final class JmxProxyImpl implements JmxProxy {
       EndpointSnitchInfoMBean endpointSnitchProxy
           = JMX.newMBeanProxy(mbeanServerConn, endpointSnitchMbeanName, EndpointSnitchInfoMBean.class);
 
-      DiagnosticEventServiceMBean diagEventProxy
-              = JMX.newMBeanProxy(mbeanServerConn, diagEventsMbeanName, DiagnosticEventServiceMBean.class);
+      DiagnosticEventPersistenceMBean diagEventProxy
+              = JMX.newMBeanProxy(mbeanServerConn, diagEventsMbeanName, DiagnosticEventPersistenceMBean.class);
+
+      LastEventIdBroadcasterMBean lastEventIdProxy
+              = JMX.newMBeanProxy(mbeanServerConn, lastEventIdMbeanName, LastEventIdBroadcasterMBean.class);
 
       JmxProxy proxy =
           new JmxProxyImpl(
@@ -281,6 +290,7 @@ final class JmxProxyImpl implements JmxProxy {
               endpointSnitchProxy,
               fdProxy,
               diagEventProxy,
+              lastEventIdProxy,
               metricRegistry);
 
       // registering a listener throws bunch of exceptions, so we do it here rather than in the
@@ -1229,12 +1239,12 @@ final class JmxProxyImpl implements JmxProxy {
   }
 
   @Override
-  public Map<String, Object> getLastEventIdsIfModified(long lastUpdated) {
-    return this.diagEventProxy.getLastEventIdsIfModified(lastUpdated);
+  public Map<String, Comparable> getLastEventIdsIfModified(long lastUpdated) {
+    return this.lastEventIdProxy.getLastEventIdsIfModified(lastUpdated);
   }
 
   @Override
-  public SortedMap<Long, Map<String, Object>> getEvents(String eventClazz, Long key, int limit, boolean includeKey) {
+  public SortedMap<Long, Map<String, Serializable>> getEvents(String eventClazz, Long key, int limit, boolean includeKey) {
     return this.diagEventProxy.getEvents(eventClazz, key, limit, includeKey);
   }
 }

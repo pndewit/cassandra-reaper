@@ -17,6 +17,7 @@ package io.cassandrareaper.resources.view;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 
 public class DiagnosticEvent {
 
@@ -36,10 +37,10 @@ public class DiagnosticEvent {
   private Long timestamp;
 
   @JsonProperty
-  private Map<String, Object> event;
+  private Map<String, Serializable> event;
 
   public DiagnosticEvent(String cluster, String node, String eventClass, String eventType, Long timestamp,
-                         Map<String, Object> event) {
+                         Map<String, Serializable> event) {
     this.cluster = cluster;
     this.node = node;
     this.eventClass = eventClass;
@@ -68,7 +69,7 @@ public class DiagnosticEvent {
     return timestamp;
   }
 
-  public Map<String, Object> getEvent() {
+  public Map<String, Serializable> getEvent() {
     return event;
   }
 }
